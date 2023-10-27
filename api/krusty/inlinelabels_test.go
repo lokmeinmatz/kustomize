@@ -419,6 +419,79 @@ spec:
 `)
 }
 
+func TestKustomizationLabelsInStatefulSetTemplateWithVolumeClaimTemplate(t *testing.T) {
+	th := kusttest_test.MakeHarness(t)
+	th.WriteF("app/sts.yaml", `
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/name: set
+  name: set
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: set
+  serviceName: set
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: set
+  volumeClaimTemplates:
+  - metadata:
+      name: userdata
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp3
+`)
+	th.WriteK("/app", `
+resources:
+- sts.yaml
+
+labels:
+- pairs:
+    foo: bar
+  includeSelectors: false
+  includeTemplates: true
+`)
+	m := th.Run("/app", th.MakeDefaultOptions())
+	th.AssertActualEqualsExpected(m, `
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/name: set
+    foo: bar
+  name: set
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: set
+  serviceName: set
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: set
+        foo: bar
+  volumeClaimTemplates:
+  - metadata:
+      name: userdata
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp3
+`)
+}
+
 func TestKustomizationLabelsInCronJobTemplate(t *testing.T) {
 	th := kusttest_test.MakeHarness(t)
 	th.WriteF("app/cjob.yaml", `
