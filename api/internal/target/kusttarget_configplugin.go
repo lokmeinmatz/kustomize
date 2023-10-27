@@ -6,6 +6,7 @@ package target
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"sigs.k8s.io/kustomize/api/internal/plugins/builtinconfig"
 	"sigs.k8s.io/kustomize/api/internal/plugins/builtinhelpers"
@@ -288,7 +289,13 @@ var transformerConfigurators = map[builtinhelpers.BuiltinPluginType]func(
 			} else {
 				// merge spec/template/metadata fieldSpecs if includeTemplate flag is true
 				if label.IncludeTemplates {
-					fss, err = fss.MergeAll(tc.TemplateLabels)
+					var filteredFsSlice []types.FieldSpec
+					for _, fs := range tc.TemplateLabels {
+						if strings.HasPrefix(fs.Path, "spec/template/metadata") {
+							filteredFsSlice = append(filteredFsSlice, fs)
+						}
+					}
+					fss, err = fss.MergeAll(filteredFsSlice)
 					if err != nil {
 						return nil, errors.WrapPrefixf(err, "failed to merge template fieldSpec")
 					}
